@@ -1,0 +1,587 @@
+options {
+  DEBUG_PARSER=false;
+  IGNORE_CASE=true;
+  }
+PARSER_BEGIN(test)
+import nodes.*;
+public class test
+{
+public static void main (String [] args)
+{
+try{
+test parser = new test(System.in);
+treeNode n = parser.start();
+n.execute();
+}
+catch(Exception e){System.out.print(e.getMessage());}
+}
+}
+PARSER_END(test)
+TOKEN : 
+{
+  < CW : "Console.writeline" >
+|
+< C1:"}" >
+|
+< C2 : ")" >
+| 
+  < FUNCTION : "function" >
+| 
+  <NULL : "null" >
+  |
+  < OPEN1 : "(" >
+  | 
+  < BREAK : "break" >
+|
+  < CASE : "case" >
+| 
+  < SWITCH : "switch" >
+| 
+  < FOR : "for" >
+| 
+  < DO :"do" >
+| 
+  < WHILE : "while" >
+|
+  < NOTEQU : "!=" >
+|
+< END : ";" >
+ |
+  < SMALLEQU : "<=" >
+| 
+  < BIGEQU : ">=">
+| 
+  < SMALL : "<">
+|
+< DOTS : ":" >
+|
+< ENDOF : "EOF" >
+|
+< OPEN : "{" >
+|
+
+< BIG : ">">
+
+| 
+  < IF : "if" >
+|
+< QUT : "\"" >
+|
+  < STRING : "string" >
+| 
+  < EQU : "=" >
+|
+< EQUEQU : "==" >
+|
+  < INT : "int" > 
+| 
+<DOUBLE : (["0"-"9"])+ ("." (["0"-"9"])+)? >
+|
+<PLUS : "+">
+|
+<MINUS : "-">
+|
+<MUL : "*">
+|
+<DIV : "/">
+|
+< CHAR : (["a"-"z"])+ >
+}
+JAVACODE 
+void error_skipto(int kind) { 
+ ParseException e = generateParseException(); // generate the exception object. 
+System.out.println("error"); // print the error message 
+Token t; 
+do { t = getNextToken(); } while (t.kind != kind);} 
+
+treeNode start():
+{
+  stringNode s;
+blockNode w;
+ExeFunc ew;
+FuncNode f;
+CheckFun c;
+assignNode a;
+}
+{
+ /*(    f=FuncSt() ew =FunEx() { ew.execute();}
+    {return f; }
+  )
+*/ 
+(  w=EveryThing()
+{return w;}
+)
+
+}
+ExeFunc FunEx():
+{
+ ExeFunc e;
+ CheckFun c;
+ Token t1;
+}
+{
+  t1=< CHAR > 
+  {
+	c=new CheckFun(t1.toString());
+	e=new ExeFunc(c);
+	return e;
+  }
+}
+FuncNode FuncSt():
+{
+  FuncNode f;
+  stringNode w1,w2;
+  Token t1,t2;
+  blockNode b;
+	String q="";
+}
+{
+  < FUNCTION >  t1=< CHAR >  
+"("
+(< INT > | < STRING >)(t2=< CHAR >{ q+=t2.toString();} )
+("," (< INT > | < STRING >)  t2=< CHAR >{ q+=","+t2.toString();} )*
+  ")"
+  "{"
+  b=EveryThing()
+  "}"
+  {
+  w1=new stringNode(t1.toString());  
+w2=new stringNode(q.toString());
+f=new FuncNode (w1,w2,b);
+     return f;}
+}
+blockNode EveryThing():
+{
+  treeNode n;
+blockNode w=new blockNode();
+}
+{
+  (LOOKAHEAD(5)
+(
+  n=SwitchSt()
+| 
+n=AssingSt()
+|
+n=IncSt()
+|
+n= WhileSt()
+|
+n=doWhileSt()
+|
+n=IfSt()
+| 
+n=print()
+|
+n=ForSt()){w.addChild(n);}
+)+
+{
+  
+  return w;
+}
+}
+SwitchNode SwitchSt():
+{
+  SwitchNode s=new SwitchNode();
+	ChechVal ss;
+	stringNode str;
+	constNode v2;
+	blockNode b=new blockNode();
+	stNode st=new stNode();
+	Token t1,t2,t4=null;  
+}
+  {
+    try { 
+ 
+    
+< SWITCH > "(" t1=< CHAR >  ")" {
+ss=new ChechVal(t1.toString());
+   s.addChild(ss); }
+"{"
+    (
+      LOOKAHEAD(2)
+      (
+  (< CASE > t2=< CHAR > ) ":"
+	b=EveryThing()
+  (< BREAK >)?
+    )+
+  {
+	ss=new ChechVal(t1.toString());
+	str=new stringNode(t2.toString());
+	s.addChild(ss);
+	s.addChild(str);
+	s.addChild(b);
+  }
+  
+
+|
+(
+  (< CASE > t2=< DOUBLE >) ":"
+	b=EveryThing()
+  (< BREAK >)?
+  {
+	
+	v2=new constNode(t2.image);
+	
+	s.addChild(v2);
+	s.addChild(b);
+	}
+	  )+
+
+
+)
+  "}"
+}catch (ParseException e) { 
+     error_skipto(C1); }
+     finally
+     {return s;
+     }
+
+}
+ ForNode ForSt():
+{
+  ForNode f=new ForNode();
+  assignNode a;
+  ChechVal c;
+  constNode cc;
+  modificationNode m;
+  stringNode ss;
+  blockNode b=new blockNode();
+  stNode s;
+  Token t1,t2,t3;
+  }
+{
+  try { 
+< FOR >"("  a=AssingSt()  t1=<CHAR > (t3=< BIG >|t3=< SMALL >) t2=<DOUBLE ><END >  m=IncSt1()")"
+	"{" b=EveryThing()"}"
+{
+	a.execute();
+	c=new ChechVal(t1.toString());
+	cc=new constNode(t2.image);
+	
+	ss=new stringNode(t3.toString());
+	f.addChild(c);
+	f.addChild(cc);
+	f.addChild(b);
+	f.addChild(ss);
+
+}
+}catch (ParseException e) { 
+     error_skipto(C1);
+   }
+   finally
+   {
+     return f;
+   }
+
+}
+doWhileNode doWhileSt():
+{
+  doWhileNode d=new doWhileNode();
+  stNode s=new stNode();
+  blockNode b=new blockNode();
+  condWhile w;
+}
+{
+ try {  
+  <DO >"{" b=EveryThing()  "}"  "(" < WHILE > w=condW()")" ";"
+  {
+    d.addChild(b);
+	d.addChild(w);
+    
+  }
+}catch (ParseException e) { 
+     error_skipto(END);
+   }
+   finally
+   {return d;
+   }
+}
+ WhileNode WhileSt():
+{
+  WhileNode w=new WhileNode();
+  condWhile c;
+  stNode s;
+  blockNode b=new blockNode();
+}
+{
+  try { 
+  < WHILE > c=condW()"{" b=EveryThing()
+"}"
+  {
+    
+	w.addChild(c);
+	w.addChild(b);
+	
+  }
+}catch (ParseException e) { 
+     error_skipto(C1);
+   }
+   finally
+   {
+     return w;
+   }
+}
+condWhile condW():
+{
+condWhile c=new condWhile();
+  constNode v2;
+  
+ChechVal v1,vv2;
+stringNode v3;
+Token t1,t2,t3;
+  }
+{
+try {  "("
+(
+ LOOKAHEAD(3) 
+ t1 = < CHAR> (t3=< NOTEQU >|t3=< EQUEQU >|t3=< BIG >|t3=<SMALL>|t3=<SMALLEQU>|t3=<BIGEQU>)
+ t2 = < DOUBLE>	
+{
+   v1=new ChechVal(t1.toString());
+   v2 = new constNode(t2.image);
+   v3=new stringNode(t3.toString());   
+  c.addChild(v1);
+  c.addChild(v2);
+  c.addChild(v3);
+  
+}
+|
+t1 = < CHAR> (t3=< NOTEQU >|t3=< EQUEQU >|t3=< BIG >|t3=<SMALL>|t3=<SMALLEQU>|t3=<BIGEQU>)
+ t2 = < CHAR>
+ {
+   v1=new ChechVal(t1.toString());
+   vv2 = new ChechVal(t2.toString());
+   v3=new stringNode(t3.toString());   
+  c.addChild(v1);
+  c.addChild(vv2);
+  c.addChild(v3);
+  
+ }
+
+)
+")"
+}catch (ParseException e) { 
+     error_skipto(C2);
+   }
+   finally
+   {return c;
+   }
+  }
+ifNode IfSt():
+{
+  ifNode a=new ifNode();
+  condNode c;
+  blockNode b=new blockNode();
+  stNode s;
+}
+{
+  try {  
+  < IF > c=cond() "{" b= EveryThing()"}"
+  {
+	a.addChild(c);
+	a.addChild(b);
+  }
+}catch (ParseException e) { 
+     error_skipto(C1);
+   }
+   finally
+   {return a;
+   }
+}
+condNode cond():
+{
+condNode c = new condNode();
+constNode v2;
+ChechVal v1,vv2;
+stringNode v3;
+Token t1,t2,t3;
+  }
+{
+  try {
+    "("
+(
+ LOOKAHEAD(3) 
+ t1 = < CHAR> (t3=< NOTEQU >|t3=< EQUEQU >|t3=< BIG >|t3=<SMALL>|t3=<SMALLEQU>|t3=<BIGEQU>)
+ t2 = < DOUBLE>	
+{
+   v1=new ChechVal(t1.toString());
+   v2 = new constNode(t2.image);
+   v3=new stringNode(t3.toString());   
+  c.addChild(v1);
+  c.addChild(v2);
+  c.addChild(v3);
+  
+}
+|
+t1 = < CHAR> (t3=< NOTEQU >|t3=< EQUEQU >|t3=< BIG >|t3=<SMALL>|t3=<SMALLEQU>|t3=<BIGEQU>)
+ t2 = < CHAR>
+ {
+   v1=new ChechVal(t1.toString());
+   vv2 = new ChechVal(t2.toString());
+   v3=new stringNode(t3.toString());   
+  c.addChild(v1);
+  c.addChild(vv2);
+  c.addChild(v3);
+  
+ }
+
+)
+")"
+}catch (ParseException e) { 
+     error_skipto(C2);
+   }
+   finally
+   {return c;
+   }
+}
+
+  modificationNode IncSt():
+{
+
+	modificationNode m=new modificationNode();
+	assignNode aa;
+	stringNode s1;
+  stringNode s2;
+  constNode con;
+  Token t,t2,t3=null;
+}
+{
+  try { 
+t= < CHAR >
+ (t2="++" | t2="--"| t2="+=" t3=< DOUBLE > | t2="-=" t3=< DOUBLE >)";"
+
+  {
+    s1=new stringNode(t.toString());
+    s2=new stringNode(t2.toString());
+    m.addChild(s1);
+    m.addChild(s2);
+if(t3 !=null){  con=new constNode(t3.image);m.addChild(con); }
+    
+  }
+}catch (ParseException e) { 
+     error_skipto(END);
+   }
+   finally
+   {
+     return m;
+   }
+
+}
+  modificationNode IncSt1():
+{
+
+	modificationNode m=new modificationNode();
+	assignNode aa;
+  stringNode s1;
+  stringNode s2;
+  constNode con;
+  Token t,t2,t3=null;
+}
+{
+  
+t= < CHAR >
+ (t2="++" | t2="--"| t2="+=" t3=< DOUBLE > | t2="-=" t3=< DOUBLE >)
+
+  {
+    s1=new stringNode(t.toString());
+    s2=new stringNode(t2.toString());
+    m.addChild(s1);
+    m.addChild(s2);
+if(t3 !=null){  con=new constNode(t3.image);m.addChild(con); }
+    return m;
+  }
+
+}
+  assignNode AssingSt():
+{
+  assignNode a=new assignNode();
+  stringNode s,s1,s3;
+  constNode c;
+  Token t1,t2,t3=null,t4=null;
+}
+{
+  try { 
+  (
+    
+   (t1=< INT > t2=<CHAR > <EQU > t3=< DOUBLE >)";"
+   {
+	s1=new stringNode(t1.toString());
+	s=new stringNode(t2.toString());
+	c=new constNode(t3.toString());
+	a.addChild(s1);
+	a.addChild(s);
+	a.addChild(c);
+	
+
+   }
+ | 
+      (t1=< STRING > t2=<CHAR ><EQU > <QUT > t4=< CHAR ><QUT >)";"
+)
+   {
+	s1=new stringNode(t1.toString());
+	s=new stringNode(t2.toString());
+	s3=new stringNode(t4.toString());
+	a.addChild(s1);
+	a.addChild(s);
+	a.addChild(s3);
+	
+}
+}
+catch (ParseException e) { 
+     error_skipto(END);
+   }
+   finally
+   {
+     return a;
+   }
+}
+stNode print():
+{
+  stNode s=new stNode();
+  ChechVal c;
+  Print st;
+  Token t,t2;
+  stringNode ww;
+  String q="";
+}
+{
+  try { 
+ < CW > "("
+  (
+   t=< CHAR >")" 
+{c=new ChechVal(t.toString());
+	s.addChild(c);
+  }
+  
+|
+  < QUT >(t=< CHAR > { st=new Print(t.toString());  q+=t.toString()+" ";})+ < QUT >")" { ww=new stringNode(q); s.addChild(ww);} 
+)
+";"
+}catch (ParseException e) { 
+     error_skipto(END); 
+
+}
+finally
+{
+return s;
+}
+}
+stringNode StringSt():
+{
+  
+  stringNode s;
+  Token t;
+}
+{
+  t=< CHAR > { s=new stringNode(t.toString());} { return s;}
+}
+SKIP :
+{
+" "
+|
+"\t"
+|
+"\n"
+| 
+"\r"
+  }
